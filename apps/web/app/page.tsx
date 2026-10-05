@@ -1,8 +1,7 @@
-export default function HomePage() {
-  return (
-    <main style={{ padding: 40, fontFamily: "system-ui, sans-serif" }}>
-      <h1>LEFTY</h1>
-      <p>Production foundation initialized.</p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  redirect(user ? "/dashboard" : "/login");
 }
