@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   role: text("role").notNull(),
   active: boolean("active").notNull().default(true),
+  passwordHash: text("password_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   organizationEmail: unique("users_organization_email_unique").on(table.organizationId, table.email),
@@ -126,5 +127,14 @@ export const auditLogs = pgTable("audit_logs", {
   entityType: text("entity_type").notNull(),
   entityId: uuid("entity_id"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+
+export const sessions = pgTable("sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
