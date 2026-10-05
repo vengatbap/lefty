@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, locations, organizations, users } from "@lefty/db";
+import { getDb, locations, organizations, users } from "@lefty/db";
 import { createPasswordHash, createSession } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     if (!name || !email || !restaurantName) return NextResponse.json({ error: "Name, email and restaurant name are required." }, { status: 400 });
 
-    const result = await db.transaction(async (tx) => {
+    const result = await getDb().transaction(async (tx) => {
       const slug = restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || `restaurant-${Date.now()}`;
       const [org] = await tx.insert(organizations).values({ name: restaurantName, slug }).returning();
       if (!org) throw new Error("Unable to create organization.");
