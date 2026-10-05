@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   organizationEmail: unique("users_organization_email_unique").on(table.organizationId, table.email),
+  emailGlobal: unique("users_email_global_unique").on(table.email),
 }));
 
 export const menuCategories = pgTable("menu_categories", {
