@@ -23,15 +23,15 @@ export async function GET() {
     const locationRows = await getDb().select().from(locations).where(eq(locations.organizationId, user.organizationId)).limit(1);
     const location = locationRows[0];
     if (!location) return NextResponse.json({ orders: [] });
-    const rows = await getDb().select({ order: orders, item: orderItems })
-      .from(orders).leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+    const rows = await getDb().select({ order: orders, item: orderItems, itemName: menuItems.name })
+      .from(orders).leftJoin(orderItems, eq(orderItems.orderId, orders.id)).leftJoin(menuItems, eq(menuItems.id, orderItems.menuItemId))
       .where(and(eq(orders.locationId, location.id), inArray(orders.status, ["new", "accepted", "preparing", "ready"])))
       .orderBy(orders.createdAt);
-    const grouped = new Map<string, { order: typeof rows[number]["order"]; items: NonNullable<typeof rows[number]["item"]>[] }>();
+    const grouped = new Map<string, { order: typeof rows[number]["order"]; items: Array<NonNullable<typeof rows[number]["item"]> & { name: string }> }>();
     for (const row of rows) {
       const existing = grouped.get(row.order.id);
-      if (existing) { if (row.item) existing.items.push(row.item); }
-      else grouped.set(row.order.id, { order: row.order, items: row.item ? [row.item] : [] });
+      if (existing) { if (row.item) existing.items.push({ ...row.item, name: row.itemName ?? "Menu item" }); }
+      else grouped.set(row.order.id, { order: row.order, items: row.item ? [{ ...row.item, name: row.itemName ?? "Menu item" }] : [] });
     }
     return NextResponse.json({ orders: [...grouped.values()] });
   } catch (error) {
