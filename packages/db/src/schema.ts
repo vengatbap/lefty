@@ -1,14 +1,11 @@
 import {
-  boolean, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid,
+  boolean, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, unique, uuid,
 } from "drizzle-orm/pg-core";
 
-export const orderStatus = pgEnum("order_status", [
-  "new", "accepted", "preparing", "ready", "completed", "cancelled",
-]);
+export const orderStatus = pgEnum("order_status", ["new", "accepted", "preparing", "ready", "completed", "cancelled"]);
 export const orderType = pgEnum("order_type", ["dine_in", "takeaway", "delivery"]);
-export const stockMovementType = pgEnum("stock_movement_type", [
-  "purchase", "sale", "waste", "adjustment", "return", "opening",
-]);
+export const paymentStatus = pgEnum("payment_status", ["pending", "authorized", "paid", "failed", "refunded", "partially_refunded"]);
+export const stockMovementType = pgEnum("stock_movement_type", ["sale", "adjustment", "return", "opening"]);
 
 export const organizations = pgTable("organizations", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -24,7 +21,9 @@ export const locations = pgTable("locations", {
   timezone: text("timezone").notNull().default("Asia/Bahrain"),
   currency: text("currency").notNull().default("BHD"),
   active: boolean("active").notNull().default(true),
-});
+}, (table) => ({
+  organizationName: unique("locations_organization_name_unique").on(table.organizationId, table.name),
+}));
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -34,7 +33,9 @@ export const users = pgTable("users", {
   role: text("role").notNull(),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  organizationEmail: unique("users_organization_email_unique").on(table.organizationId, table.email),
+}));
 
 export const menuCategories = pgTable("menu_categories", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -51,45 +52,18 @@ export const menuItems = pgTable("menu_items", {
   name: text("name").notNull(),
   sku: text("sku"),
   price: numeric("price", { precision: 12, scale: 3 }).notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  trackAvailability: boolean("track_availability").notNull().default(true),
   active: boolean("active").notNull().default(true),
-});
-
-export const ingredients = pgTable("ingredients", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  locationId: uuid("location_id").notNull().references(() => locations.id),
-  name: text("name").notNull(),
-  sku: text("sku"),
-  unit: text("unit").notNull(),
-  reorderLevel: numeric("reorder_level", { precision: 14, scale: 4 }).notNull().default("0"),
-  active: boolean("active").notNull().default(true),
-});
-
-export const recipes = pgTable("recipes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  menuItemId: uuid("menu_item_id").notNull().references(() => menuItems.id),
-  version: integer("version").notNull().default(1),
-  active: boolean("active").notNull().default(true),
-});
-
-export const recipeIngredients = pgTable("recipe_ingredients", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  recipeId: uuid("recipe_id").notNull().references(() => recipes.id),
-  ingredientId: uuid("ingredient_id").notNull().references(() => ingredients.id),
-  quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
-});
-
-export const stockBalances = pgTable("stock_balances", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  ingredientId: uuid("ingredient_id").notNull().references(() => ingredients.id),
-  quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const stockMovements = pgTable("stock_movements", {
   id: uuid("id").defaultRandom().primaryKey(),
-  ingredientId: uuid("ingredient_id").notNull().references(() => ingredients.id),
+  menuItemId: uuid("menu_item_id").notNull().references(() => menuItems.id),
   locationId: uuid("location_id").notNull().references(() => locations.id),
   type: stockMovementType("type").notNull(),
-  quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
+  quantity: integer("quantity").notNull(),
   referenceType: text("reference_type"),
   referenceId: uuid("reference_id"),
   idempotencyKey: text("idempotency_key").unique(),
@@ -125,9 +99,23 @@ export const orderItems = pgTable("order_items", {
   id: uuid("id").defaultRandom().primaryKey(),
   orderId: uuid("order_id").notNull().references(() => orders.id),
   menuItemId: uuid("menu_item_id").notNull().references(() => menuItems.id),
-  quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
+  quantity: integer("quantity").notNull(),
   unitPrice: numeric("unit_price", { precision: 12, scale: 3 }).notNull(),
   total: numeric("total", { precision: 12, scale: 3 }).notNull(),
+});
+
+export const payments = pgTable("payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id),
+  provider: text("provider").notNull(),
+  method: text("method").notNull(),
+  status: paymentStatus("status").notNull().default("pending"),
+  amount: numeric("amount", { precision: 12, scale: 3 }).notNull(),
+  providerReference: text("provider_reference"),
+  idempotencyKey: text("idempotency_key").unique(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const auditLogs = pgTable("audit_logs", {
