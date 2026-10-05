@@ -54,3 +54,8 @@ input:focus { border-color:#888; box-shadow:0 0 0 3px #eee; }
 .cart-total { display:flex;justify-content:space-between;padding:20px 0;font-size:18px; }
 .cart .primary { width:100%; }
 @media(max-width:800px){.cards{grid-template-columns:1fr}.pos-page{grid-template-columns:1fr}.products{grid-template-columns:repeat(2,1fr)}.hero{align-items:start;flex-direction:column}.topbar{padding:0 16px}.dashboard,.pos-page{width:min(100% - 24px,1180px)}}
+
+.menu-form { display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto; gap:10px; }
+.stock-actions { display:flex; align-items:center; gap:8px; }
+.stock-actions .secondary { min-width:36px; padding:8px 11px; }
+@media(max-width:800px){.menu-form{grid-template-columns:1fr 1fr}.menu-form .primary{grid-column:1/-1}}
