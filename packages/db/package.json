@@ -1,0 +1,11 @@
+{
+  "name": "@lefty/db",
+  "private": true,
+  "version": "1.0.0-alpha.1",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "drizzle-orm": "^0.44.5",
+    "postgres": "^3.4.7"
+  }
+}
