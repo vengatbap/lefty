@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getDb, auditLogs, locations, orders, orderItems, payments, stockMovements, menuItems } from "@lefty/db";
 import { canTransitionOrder, type OrderStatus } from "@lefty/domain";
 import { requireUser } from "@/lib/auth";
+import { getPaymentProvider } from "@lefty/payments";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -40,6 +41,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       if (result.length !== 1) throw new Error("ORDER_CONFLICT");
 
       if (next === "cancelled") {
+        const paymentProvider = getPaymentProvider("manual");
         const lines = await tx.select({ item: orderItems, menu: menuItems })
           .from(orderItems).innerJoin(menuItems, eq(menuItems.id, orderItems.menuItemId))
           .where(eq(orderItems.orderId, id));
@@ -48,7 +50,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             const reversalKey = `cancel:${id}:${line.item.menuItemId}`;
             const existing = await tx.select({ id: stockMovements.id }).from(stockMovements).where(eq(stockMovements.idempotencyKey, reversalKey)).limit(1);
             if (!existing[0]) {
-              await tx.update(menuItems).set({ quantity: line.menu.quantity + line.item.quantity, updatedAt: new Date() }).where(eq(menuItems.id, line.menu.id));
+              await tx.update(menuItems).set({ quantity: sql`${menuItems.quantity} + ${line.item.quantity}`, updatedAt: new Date() }).where(eq(menuItems.id, line.menu.id));
               await tx.insert(stockMovements).values({
                 menuItemId: line.menu.id, locationId: current.locationId, type: "return", quantity: line.item.quantity,
                 referenceType: "order_cancellation", referenceId: id, idempotencyKey: reversalKey,
@@ -56,7 +58,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             }
           }
         }
-        await tx.update(payments).set({ status: "refunded", updatedAt: new Date() }).where(and(eq(payments.orderId, id), eq(payments.status, "paid")));
+        const paidRows = await tx.select().from(payments).where(and(eq(payments.orderId, id), eq(payments.status, "paid")));
+        for (const payment of paidRows) {
+          const refund = await paymentProvider.refundPayment({ orderId: id, amount: payment.amount, providerReference: payment.providerReference, idempotencyKey: `refund:${payment.id}` });
+          await tx.update(payments).set({ status: refund.status, updatedAt: new Date() }).where(eq(payments.id, payment.id));
+        }
       }
 
       await tx.insert(auditLogs).values({
