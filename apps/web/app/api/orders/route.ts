@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb, auditLogs, locations, menuItems, orderItems, orders, payments, stockMovements, tables } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { getPaymentProvider, type PaymentMethod } from "@lefty/payments";
 
 const POS_ROLES = new Set(["owner", "admin", "manager", "incharge", "cashier"]);
@@ -44,7 +45,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
-    if (!POS_ROLES.has(user.role)) return NextResponse.json({ error: "You do not have permission to create orders." }, { status: 403 });
+    if (!can(user.role, "orders.create")) return NextResponse.json({ error: "You do not have permission to create orders." }, { status: 403 });
 
     const body = await request.json();
     const type = body.type === "dine_in" || body.type === "delivery" ? body.type : "takeaway";
