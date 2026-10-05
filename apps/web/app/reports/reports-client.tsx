@@ -1,0 +1,12 @@
+"use client";
+import { useEffect, useState } from "react";
+
+type Report = { date:string; location:string; sales:{orders:number;gross:string;completed:number;cancelled:number}; payments:{paid:string;refunded:string}; stock:{soldUnits:number;adjustedUnits:number} };
+
+export function ReportsClient() {
+  const [report,setReport]=useState<Report|null>(null);
+  const [date,setDate]=useState(new Date().toISOString().slice(0,10));
+  const [error,setError]=useState("");
+  useEffect(()=>{ fetch(`/api/reports/daily?date=${date}`).then(r=>r.json()).then(d=>{if(!d.report) throw new Error("No report"); setReport(d.report)}).catch(e=>setError(e.message)); },[date]);
+  return <main className="app-page"><header className="topbar"><div><div className="logo">LEFTY</div><span className="muted">Daily report</span></div><a className="secondary link-button" href="/dashboard">Dashboard</a></header><section className="dashboard"><div className="hero"><div><p className="eyebrow">CLOSING & REPORTING</p><h1>Daily operations</h1><p className="muted">Sales, payment and stock summary for the selected business day.</p></div><input className="field-input" type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>{error&&<p className="error">{error}</p>}{report&&<><div className="cards"><div className="metric"><span>Gross sales</span><strong>{Number(report.sales.gross).toFixed(3)}</strong><small>{report.sales.orders} orders</small></div><div className="metric"><span>Paid</span><strong>{Number(report.payments.paid).toFixed(3)}</strong><small>Captured payments</small></div><div className="metric"><span>Refunded</span><strong>{Number(report.payments.refunded).toFixed(3)}</strong><small>Refunded payments</small></div></div><section className="panel"><h2>Operational close</h2><div className="menu-list"><div className="menu-row"><span>Completed orders</span><b>{report.sales.completed}</b></div><div className="menu-row"><span>Cancelled orders</span><b>{report.sales.cancelled}</b></div><div className="menu-row"><span>Units sold</span><b>{report.stock.soldUnits}</b></div><div className="menu-row"><span>Manual stock adjustments</span><b>{report.stock.adjustedUnits}</b></div></div></section></>}</section></main>;
+}

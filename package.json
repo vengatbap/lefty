@@ -1,11 +1,19 @@
 {
   "name": "lefty",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "version": "1.0.0-alpha.1",
+  "packageManager": "pnpm@10.15.0",
+  "engines": { "node": ">=22.0.0" },
   "scripts": {
-    "dev": "python3 -m http.server 4173",
-    "build": "node --check src/main.js && node --check src/order-engine.js",
-    "test": "node --test"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
   }
 }

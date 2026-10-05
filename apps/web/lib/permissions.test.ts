@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest";
+import { can } from "./permissions";
+describe("permissions",()=>{it("allows cashier order creation but not menu management",()=>{expect(can("cashier","orders.create")).toBe(true);expect(can("cashier","menu.manage")).toBe(false);});it("limits reports to management",()=>{expect(can("employee","reports.read")).toBe(false);expect(can("manager","reports.read")).toBe(true);});});

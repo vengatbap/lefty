@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest";
+import { ManualPaymentProvider } from "./index";
+describe("manual payment provider",()=>{it("captures cash idempotently by reference",async()=>{const p=new ManualPaymentProvider();const r=await p.createPayment({orderId:"o1",amount:"1.000",method:"cash",idempotencyKey:"k1"});expect(r.status).toBe("paid");expect(r.provider).toBe("manual");expect(r.providerReference).toBe("k1");});it("returns refunded state",async()=>{const p=new ManualPaymentProvider();const r=await p.refundPayment({orderId:"o1",amount:"1.000",idempotencyKey:"r1"});expect(r.status).toBe("refunded");});});
