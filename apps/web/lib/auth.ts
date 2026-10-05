@@ -2,7 +2,7 @@ import { createHash, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { and, eq, gt } from "drizzle-orm";
-import { db, sessions, users } from "@lefty/db";
+import { getDb, sessions, users } from "@lefty/db";
 
 const scrypt = promisify(nodeScrypt);
 const COOKIE = "lefty_session";
@@ -38,7 +38,7 @@ export async function verifyPassword(password: string, stored: string) {
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000);
-  await db.insert(sessions).values({ userId, tokenHash: tokenHash(token), expiresAt });
+  await getDb().insert(sessions).values({ userId, tokenHash: tokenHash(token), expiresAt });
   const store = await cookies();
   store.set(COOKIE, token, {
     httpOnly: true,
@@ -53,7 +53,7 @@ export async function getCurrentUser() {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
-  const rows = await db.select({ user: users }).from(sessions)
+  const rows = await getDb().select({ user: users }).from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.tokenHash, tokenHash(token)), gt(sessions.expiresAt, new Date()), eq(users.active, true)))
     .limit(1);
@@ -69,6 +69,6 @@ export async function requireUser() {
 export async function clearSession() {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
-  if (token) await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash(token)));
+  if (token) await getDb().delete(sessions).where(eq(sessions.tokenHash, tokenHash(token)));
   store.delete(COOKIE);
 }
