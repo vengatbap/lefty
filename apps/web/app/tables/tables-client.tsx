@@ -1,0 +1,10 @@
+"use client";
+import { FormEvent,useEffect,useState } from "react";
+type Table={id:string;name:string;capacity:number};
+export function TablesClient(){
+ const [tables,setTables]=useState<Table[]>([]); const [message,setMessage]=useState("");
+ async function load(){const r=await fetch("/api/tables");const d=await r.json();setTables(d.tables??[]);}
+ useEffect(()=>{load()},[]);
+ async function create(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));const r=await fetch("/api/tables",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.name,capacity:Number(data.capacity)})});const d=await r.json();if(!r.ok){setMessage(d.error??"Unable to create table.");return;}e.currentTarget.reset();setMessage("Table added.");load();}
+ return <main className="app-page"><header className="topbar"><div><div className="logo">LEFTY · TABLES</div><span className="muted">Floor setup</span></div><a className="secondary link-button" href="/dashboard">Dashboard</a></header><section className="dashboard"><div className="hero"><div><p className="eyebrow">FLOOR MANAGEMENT</p><h1>Tables</h1><p className="muted">Configure dine-in tables for the POS.</p></div></div><section className="panel"><form className="menu-form" onSubmit={create}><input name="name" placeholder="Table name" required/><input name="capacity" type="number" min="1" max="100" placeholder="Capacity" required/><button className="primary">Add table</button></form>{message&&<p className="success">{message}</p>}</section><section className="panel" style={{marginTop:16}}><div className="menu-list">{tables.map(t=><div className="menu-row" key={t.id}><strong>{t.name}</strong><span>Seats {t.capacity}</span></div>)}{!tables.length&&<p className="empty">No tables configured.</p>}</div></section></section></main>;
+}
