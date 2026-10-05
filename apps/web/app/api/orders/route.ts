@@ -17,6 +17,29 @@ function normalizeItems(input: unknown) {
   return [...map.entries()].map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
 }
 
+export async function GET() {
+  try {
+    const user = await requireUser();
+    const locationRows = await getDb().select().from(locations).where(eq(locations.organizationId, user.organizationId)).limit(1);
+    const location = locationRows[0];
+    if (!location) return NextResponse.json({ orders: [] });
+    const rows = await getDb().select({ order: orders, item: orderItems })
+      .from(orders).leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+      .where(and(eq(orders.locationId, location.id), inArray(orders.status, ["new", "accepted", "preparing", "ready"])))
+      .orderBy(orders.createdAt);
+    const grouped = new Map<string, { order: typeof rows[number]["order"]; items: NonNullable<typeof rows[number]["item"]>[] }>();
+    for (const row of rows) {
+      const existing = grouped.get(row.order.id);
+      if (existing) { if (row.item) existing.items.push(row.item); }
+      else grouped.set(row.order.id, { order: row.order, items: row.item ? [row.item] : [] });
+    }
+    return NextResponse.json({ orders: [...grouped.values()] });
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unable to load orders." }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
