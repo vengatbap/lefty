@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, eq, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { customers, getDb } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
 
@@ -8,9 +8,9 @@ export async function GET(request: Request) {
     const user = await requireUser();
     const q = new URL(request.url).searchParams.get("q")?.trim();
     const rows = await getDb().select().from(customers)
-      .where(q ? or(eq(customers.organizationId, user.organizationId), ilike(customers.name, `%${q}%`)) : eq(customers.organizationId, user.organizationId))
+      .where(q ? and(eq(customers.organizationId, user.organizationId), or(ilike(customers.name, `%${q}%`), ilike(customers.phone, `%${q}%`), ilike(customers.email, `%${q}%`))) : eq(customers.organizationId, user.organizationId))
       .orderBy(desc(customers.createdAt)).limit(100);
-    return NextResponse.json({ customers: rows.filter(r => r.organizationId === user.organizationId) });
+    return NextResponse.json({ customers: rows });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     return NextResponse.json({ error: "Unable to load customers." }, { status: 500 });
