@@ -10,7 +10,6 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   try {
     const user = await requireUser();
     const { id } = await context.params;
-    if (!can(user.role, "orders.update")) return NextResponse.json({ error: "You do not have permission to update orders." }, { status: 403 });
     const rows = await getDb().select({ order: orders, item: orderItems }).from(orders)
       .innerJoin(locations, eq(locations.id, orders.locationId))
       .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
@@ -27,6 +26,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   try {
     const user = await requireUser();
     const { id } = await context.params;
+    if (!can(user.role, "orders.update")) return NextResponse.json({ error: "You do not have permission to update orders." }, { status: 403 });
     const body = await request.json();
     const next = String(body.status) as OrderStatus;
     const rows = await getDb().select({ order: orders }).from(orders)
