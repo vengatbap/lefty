@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Item = { id: string; name: string; price: string; quantity: number; trackAvailability: boolean; category?: string | null };
+type Item = { id: string; name: string; price: string; quantity: number; trackAvailability: boolean; active: boolean; category?: string | null };
 type CartLine = Item & { count: number };
 
 export function POSClient() {
