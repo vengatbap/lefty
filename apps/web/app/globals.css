@@ -59,3 +59,13 @@ input:focus { border-color:#888; box-shadow:0 0 0 3px #eee; }
 .stock-actions { display:flex; align-items:center; gap:8px; }
 .stock-actions .secondary { min-width:36px; padding:8px 11px; }
 @media(max-width:800px){.menu-form{grid-template-columns:1fr 1fr}.menu-form .primary{grid-column:1/-1}}
+
+.kds-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.kds-column { background:#eee; border:1px solid #ddd; border-radius:14px; padding:12px; min-height:320px; }
+.kds-heading { display:flex; justify-content:space-between; align-items:center; text-transform:capitalize; padding:4px 4px 12px; }
+.ticket { background:#fff; border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:10px; box-shadow:0 3px 10px rgba(0,0,0,.04); }
+.ticket-top { display:flex;justify-content:space-between;margin-bottom:12px; }
+.ticket-item { display:flex;gap:10px;padding:8px 0;border-top:1px solid #eee; }
+.ticket .primary { width:100%;margin-top:12px; }
+@media(max-width:1000px){.kds-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.kds-grid{grid-template-columns:1fr}}
