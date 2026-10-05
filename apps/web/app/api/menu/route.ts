@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, auditLogs, locations, menuCategories, menuItems } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
-    if (!["owner", "admin", "manager", "incharge"].includes(user.role)) return NextResponse.json({ error: "You do not have permission to manage the menu." }, { status: 403 });
+    if (!can(user.role, "menu.manage")) return NextResponse.json({ error: "You do not have permission to manage the menu." }, { status: 403 });
     const body = await request.json();
     const name = String(body.name ?? "").trim();
     const price = Number(body.price);
