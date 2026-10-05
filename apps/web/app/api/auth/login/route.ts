@@ -11,7 +11,10 @@ export async function POST(request: Request) {
     if (!email || !password) return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
 
     const rows = await db.select().from(users).where(and(eq(users.email, email), eq(users.active, true))).limit(10);
-    const user = rows.find((candidate) => candidate.passwordHash && verifyPassword(password, candidate.passwordHash));
+    let user = null;
+    for (const candidate of rows) {
+      if (candidate.passwordHash && await verifyPassword(password, candidate.passwordHash)) { user = candidate; break; }
+    }
     if (!user || !user.passwordHash) return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
 
     await createSession(user.id);
