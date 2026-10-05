@@ -3,12 +3,14 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb, auditLogs, locations, orders, orderItems, payments, stockMovements, menuItems } from "@lefty/db";
 import { canTransitionOrder, type OrderStatus } from "@lefty/domain";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { getPaymentProvider } from "@lefty/payments";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
     const { id } = await context.params;
+    if (!can(user.role, "orders.update")) return NextResponse.json({ error: "You do not have permission to update orders." }, { status: 403 });
     const rows = await getDb().select({ order: orders, item: orderItems }).from(orders)
       .innerJoin(locations, eq(locations.id, orders.locationId))
       .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
