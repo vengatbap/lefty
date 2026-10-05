@@ -54,6 +54,7 @@ export const menuItems = pgTable("menu_items", {
   sku: text("sku"),
   price: numeric("price", { precision: 12, scale: 3 }).notNull(),
   quantity: integer("quantity").notNull().default(0),
+  lowStockThreshold: integer("low_stock_threshold").notNull().default(3),
   trackAvailability: boolean("track_availability").notNull().default(true),
   active: boolean("active").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
