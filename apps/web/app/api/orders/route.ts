@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb, auditLogs, locations, menuItems, orderItems, orders, payments, stockMovements, tables } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
+import { getPaymentProvider, type PaymentMethod } from "@lefty/payments";
 
 const POS_ROLES = new Set(["owner", "admin", "manager", "incharge", "cashier"]);
 
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
     const type = body.type === "dine_in" || body.type === "delivery" ? body.type : "takeaway";
     const requestedItems = normalizeItems(body.items);
     const idempotencyKey = body.idempotencyKey ? String(body.idempotencyKey) : null;
+    const paymentMethod = ["cash","card","bank_transfer","other"].includes(String(body.paymentMethod)) ? String(body.paymentMethod) as PaymentMethod : "cash";
+    const paymentProvider = getPaymentProvider("manual");
     if (idempotencyKey) {
       const existing = await getDb().select({ order: orders }).from(payments).innerJoin(orders, eq(orders.id, payments.orderId)).where(eq(payments.idempotencyKey, idempotencyKey)).limit(1);
       if (existing[0]?.order) return NextResponse.json({ order: existing[0].order, idempotentReplay: true });
@@ -95,9 +98,10 @@ export async function POST(request: Request) {
       if (!created) throw new Error("Unable to create order.");
 
       await tx.insert(orderItems).values(lineItems.map((line) => ({ ...line, orderId: created.id })));
+      const payment = await paymentProvider.createPayment({ orderId: created.id, amount: total.toFixed(3), method: paymentMethod, idempotencyKey });
       await tx.insert(payments).values({
-        orderId: created.id, provider: "manual", method: String(body.paymentMethod ?? "cash"),
-        status: "paid", amount: total.toFixed(3), idempotencyKey: idempotencyKey ?? undefined,
+        orderId: created.id, provider: payment.provider, method: paymentMethod,
+        status: payment.status, amount: total.toFixed(3), providerReference: payment.providerReference, idempotencyKey: idempotencyKey ?? undefined,
       });
 
       for (const line of requestedItems) {
