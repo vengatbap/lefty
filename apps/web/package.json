@@ -16,7 +16,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "^4.1.5",
-    "@lefty/payments": "workspace:*"
+    "@lefty/payments": "workspace:*",
+    "drizzle-orm": "^0.44.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
