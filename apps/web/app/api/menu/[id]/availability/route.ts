@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, auditLogs, locations, menuItems, stockMovements } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
 const ROLES = new Set(["owner", "admin", "manager", "incharge"]);
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
-    if (!ROLES.has(user.role)) return NextResponse.json({ error: "You do not have permission to adjust availability." }, { status: 403 });
+    if (!can(user.role, "inventory.adjust")) return NextResponse.json({ error: "You do not have permission to adjust availability." }, { status: 403 });
     const { id } = await context.params;
     const body = await request.json();
     const delta = Number(body.delta);
