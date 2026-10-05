@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { getDb, auditLogs, locations, menuItems, orderItems, orders, payments, stockMovements } from "@lefty/db";
+import { getDb, auditLogs, locations, menuItems, orderItems, orders, payments, stockMovements, tables } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
 
 const POS_ROLES = new Set(["owner", "admin", "manager", "incharge", "cashier"]);
@@ -56,6 +56,10 @@ export async function POST(request: Request) {
     const locationRows = await getDb().select().from(locations).where(eq(locations.organizationId, user.organizationId)).limit(1);
     const location = locationRows[0];
     if (!location) return NextResponse.json({ error: "No active outlet is configured." }, { status: 409 });
+    if (type === "dine_in" && body.tableId) {
+      const table = await getDb().select({ id: tables.id }).from(tables).where(and(eq(tables.id, String(body.tableId)), eq(tables.locationId, location.id), eq(tables.active, true))).limit(1);
+      if (!table[0]) return NextResponse.json({ error: "Selected table is invalid." }, { status: 400 });
+    }
 
     const order = await getDb().transaction(async (tx) => {
       const ids = requestedItems.map((item) => item.menuItemId);
