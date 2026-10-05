@@ -71,8 +71,8 @@ export async function POST(request: Request) {
         if (!product || !product.active) throw new Error("A selected menu item is unavailable.");
         if (product.trackAvailability) {
           const updated = await tx.update(menuItems)
-            .set({ quantity: getSql()`${menuItems.quantity} - ${requested.quantity}`, updatedAt: new Date() })
-            .where(and(eq(menuItems.id, product.id), eq(menuItems.locationId, location.id), getSql()`${menuItems.quantity} >= ${requested.quantity}`))
+            .set({ quantity: sql`${menuItems.quantity} - ${requested.quantity}`, updatedAt: new Date() })
+            .where(and(eq(menuItems.id, product.id), eq(menuItems.locationId, location.id), sql`${menuItems.quantity} >= ${requested.quantity}`))
             .returning({ id: menuItems.id });
           if (updated.length !== 1) throw new Error(`${product.name} does not have enough availability.`);
         }
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       await tx.insert(orderItems).values(lineItems.map((line) => ({ ...line, orderId: created.id })));
       await tx.insert(payments).values({
         orderId: created.id, provider: "manual", method: String(body.paymentMethod ?? "cash"),
-        status: "paid", amount: total.toFixed(3), idempotencyKey: body.idempotencyKey ? String(body.idempotencyKey) : undefined,
+        status: "paid", amount: total.toFixed(3), idempotencyKey: idempotencyKey ?? undefined,
       });
 
       for (const line of requestedItems) {
