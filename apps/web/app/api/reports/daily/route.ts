@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { getDb, locations, orders, payments, stockMovements } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   try {
     const user = await requireUser();
+    if (!can(user.role, "reports.read")) return NextResponse.json({ error: "You do not have permission to view reports." }, { status: 403 });
     const date = new URL(request.url).searchParams.get("date") ?? new Date().toISOString().slice(0,10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Invalid date." }, { status: 400 });
     const location = (await getDb().select().from(locations).where(and(eq(locations.organizationId,user.organizationId),eq(locations.active,true))).limit(1))[0];
