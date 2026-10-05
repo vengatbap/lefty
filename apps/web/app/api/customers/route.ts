@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { customers, getDb } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   try {
