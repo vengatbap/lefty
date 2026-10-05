@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { db, users } from "@lefty/db";
+import { getDb, users } from "@lefty/db";
 import { createSession, verifyPassword } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const password = String(body.password ?? "");
     if (!email || !password) return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
 
-    const rows = await db.select().from(users).where(and(eq(users.email, email), eq(users.active, true))).limit(10);
+    const rows = await getDb().select().from(users).where(and(eq(users.email, email), eq(users.active, true))).limit(10);
     let user = null;
     for (const candidate of rows) {
       if (candidate.passwordHash && await verifyPassword(password, candidate.passwordHash)) { user = candidate; break; }
