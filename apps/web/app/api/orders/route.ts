@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { db, auditLogs, locations, menuItems, orderItems, orders, payments, stockMovements } from "@lefty/db";
+import { getDb, auditLogs, locations, menuItems, orderItems, orders, payments, stockMovements } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
 
 const POS_ROLES = new Set(["owner", "admin", "manager", "incharge", "cashier"]);
@@ -27,14 +27,14 @@ export async function POST(request: Request) {
     const requestedItems = normalizeItems(body.items);
     const idempotencyKey = body.idempotencyKey ? String(body.idempotencyKey) : null;
     if (idempotencyKey) {
-      const existing = await db.select({ order: orders }).from(payments).innerJoin(orders, eq(orders.id, payments.orderId)).where(eq(payments.idempotencyKey, idempotencyKey)).limit(1);
+      const existing = await getDb().select({ order: orders }).from(payments).innerJoin(orders, eq(orders.id, payments.orderId)).where(eq(payments.idempotencyKey, idempotencyKey)).limit(1);
       if (existing[0]?.order) return NextResponse.json({ order: existing[0].order, idempotentReplay: true });
     }
-    const locationRows = await db.select().from(locations).where(eq(locations.organizationId, user.organizationId)).limit(1);
+    const locationRows = await getDb().select().from(locations).where(eq(locations.organizationId, user.organizationId)).limit(1);
     const location = locationRows[0];
     if (!location) return NextResponse.json({ error: "No active outlet is configured." }, { status: 409 });
 
-    const order = await db.transaction(async (tx) => {
+    const order = await getDb().transaction(async (tx) => {
       const ids = requestedItems.map((item) => item.menuItemId);
       const products = await tx.select().from(menuItems).where(and(eq(menuItems.locationId, location.id), inArray(menuItems.id, ids)));
       if (products.length !== ids.length) throw new Error("One or more menu items are invalid.");
@@ -48,8 +48,8 @@ export async function POST(request: Request) {
         if (!product || !product.active) throw new Error("A selected menu item is unavailable.");
         if (product.trackAvailability) {
           const updated = await tx.update(menuItems)
-            .set({ quantity: sql`${menuItems.quantity} - ${requested.quantity}`, updatedAt: new Date() })
-            .where(and(eq(menuItems.id, product.id), eq(menuItems.locationId, location.id), sql`${menuItems.quantity} >= ${requested.quantity}`))
+            .set({ quantity: getSql()`${menuItems.quantity} - ${requested.quantity}`, updatedAt: new Date() })
+            .where(and(eq(menuItems.id, product.id), eq(menuItems.locationId, location.id), getSql()`${menuItems.quantity} >= ${requested.quantity}`))
             .returning({ id: menuItems.id });
           if (updated.length !== 1) throw new Error(`${product.name} does not have enough availability.`);
         }
