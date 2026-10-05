@@ -25,6 +25,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const type = body.type === "dine_in" || body.type === "delivery" ? body.type : "takeaway";
     const requestedItems = normalizeItems(body.items);
+    const idempotencyKey = body.idempotencyKey ? String(body.idempotencyKey) : null;
+    if (idempotencyKey) {
+      const existing = await db.select({ order: orders }).from(payments).innerJoin(orders, eq(orders.id, payments.orderId)).where(eq(payments.idempotencyKey, idempotencyKey)).limit(1);
+      if (existing[0]?.order) return NextResponse.json({ order: existing[0].order, idempotentReplay: true });
+    }
     const locationRows = await db.select().from(locations).where(eq(locations.organizationId, user.organizationId)).limit(1);
     const location = locationRows[0];
     if (!location) return NextResponse.json({ error: "No active outlet is configured." }, { status: 409 });
@@ -74,7 +79,7 @@ export async function POST(request: Request) {
           await tx.insert(stockMovements).values({
             menuItemId: product.id, locationId: location.id, type: "sale", quantity: -line.quantity,
             referenceType: "order", referenceId: created.id,
-            idempotencyKey: body.idempotencyKey ? `${body.idempotencyKey}:${product.id}` : undefined,
+            idempotencyKey: idempotencyKey ? `${idempotencyKey}:${product.id}` : undefined,
           });
         }
       }
