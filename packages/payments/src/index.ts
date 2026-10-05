@@ -25,10 +25,10 @@ export interface PaymentProvider {
 export class ManualPaymentProvider implements PaymentProvider {
   readonly name = "manual";
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
-    return { provider: this.name, status: "paid", providerReference: request.idempotencyKey ?? undefined };
+    return request.idempotencyKey ? { provider: this.name, status: "paid", providerReference: request.idempotencyKey } : { provider: this.name, status: "paid" };
   }
   async refundPayment(input: { orderId: string; amount: string; providerReference?: string | null; idempotencyKey?: string | null }): Promise<PaymentResult> {
-    return { provider: this.name, status: "refunded", providerReference: input.providerReference ?? input.idempotencyKey ?? undefined };
+    const reference = input.providerReference ?? input.idempotencyKey; return reference ? { provider: this.name, status: "refunded", providerReference: reference } : { provider: this.name, status: "refunded" };
   }
 }
 
