@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { db, locations, menuCategories, menuItems } from "@lefty/db";
+import { getDb, locations, menuCategories, menuItems } from "@lefty/db";
 import { requireUser } from "@/lib/auth";
 
 export async function GET() {
   try {
     const user = await requireUser();
-    const rows = await db.select({ item: menuItems, category: menuCategories.name })
+    const rows = await getDb().select({ item: menuItems, category: menuCategories.name })
       .from(menuItems)
       .leftJoin(menuCategories, eq(menuCategories.id, menuItems.categoryId))
       .innerJoin(locations, eq(locations.id, menuItems.locationId))
