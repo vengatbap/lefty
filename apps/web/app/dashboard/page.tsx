@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { db, locations, menuItems } from "@lefty/db";
+import { getDb, locations, menuItems } from "@lefty/db";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { LogoutButton } from "./logout-button";
@@ -7,8 +7,8 @@ import { LogoutButton } from "./logout-button";
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const outlets = await db.select().from(locations).where(eq(locations.organizationId, user.organizationId));
-  const items = outlets[0] ? await db.select().from(menuItems).where(eq(menuItems.locationId, outlets[0].id)) : [];
+  const outlets = await getDb().select().from(locations).where(eq(locations.organizationId, user.organizationId));
+  const items = outlets[0] ? await getDb().select().from(menuItems).where(eq(menuItems.locationId, outlets[0].id)) : [];
 
   return <main className="app-page">
     <header className="topbar"><div><div className="logo">LEFTY</div><span className="muted">{outlets[0]?.name ?? "No outlet"}</span></div><div className="top-actions"><span>{user.name} · {user.role}</span><LogoutButton /></div></header>
